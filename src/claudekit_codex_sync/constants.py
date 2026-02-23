@@ -2,8 +2,8 @@
 
 from typing import List, Set, Tuple
 
-ASSET_DIRS = {"commands", "output-styles", "scripts"}
-ASSET_FILES = {".env.example"}
+ASSET_DIRS = {"commands", "output-styles", "rules", "scripts"}
+ASSET_FILES = {".env.example", ".ck.json"}
 ASSET_MANIFEST = ".sync-manifest-assets.txt"
 PROMPT_MANIFEST = ".claudekit-generated-prompts.txt"
 REGISTRY_FILE = ".claudekit-sync-registry.json"

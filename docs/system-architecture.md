@@ -6,9 +6,11 @@
 ┌─────────────────────┐    ┌──────────────────────────┐
 │ ClaudeKit Source     │    │ Codex Target              │
 │ ~/.claude/ or zip    │───▶│ ./.codex or ~/.codex      │
+│   agents/*.md        │    │   agents/*.toml (convert) │
 │   skills/*           │    │   skills/*                │
 │   commands/          │    │   claudekit/commands/     │
 │   output-styles/     │    │   claudekit/output-styles/│
+│   rules/             │    │   claudekit/rules/        │
 │   scripts/           │    │   claudekit/scripts/      │
 └─────────────────────┘    │   prompts/* (generated)   │
                             │   config.toml             │
@@ -25,12 +27,15 @@ Workspace baseline: `./AGENTS.md` is ensured in the current working directory.
 - Select source: live (`~/.claude/`) or zip (`--zip`)
 
 2. **Asset/skill sync**
-- Copy managed assets and skills
+- Copy agents `.md` directly to `codex_home/agents/` (for TOML conversion)
+- Copy managed assets (commands, output-styles, rules, scripts) to `codex_home/claudekit/`
+- Copy skills to `codex_home/skills/`
 - Apply registry-aware overwrite behavior (`--force`)
 
 3. **Normalization**
 - Rewrite `.claude` references to `.codex`
-- Normalize agent TOMLs and compatibility patches
+- Convert agent `.md` (YAML frontmatter) → `.toml` with model mapping
+- Normalize existing agent TOMLs and compatibility patches
 
 4. **Config enforcement**
 - Enforce `config.toml` defaults
@@ -64,6 +69,7 @@ Workspace baseline: `./AGENTS.md` is ensured in the current working directory.
 ## Design Notes
 
 - Project-first scope reduces accidental global writes while developing.
-- `clean_target.py` preserves `skills/.venv` to keep refresh runs fast.
+- Agents copied to top-level `agents/` (not `claudekit/agents/`) to match conversion function expectations.
+- `clean_target.py` deletes real `.venv` dirs (keeps symlinks) so re-symlink works on refresh.
+- Bootstrap skips pip install when venv is symlinked — packages already present.
 - Registry writes are defensive (`mkdir` before save) to avoid missing-path failures.
-- Bootstrap path prefers symlink reuse for speed; fallback path ensures portability.

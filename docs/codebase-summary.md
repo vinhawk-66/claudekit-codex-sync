@@ -18,7 +18,7 @@
 ### Core Orchestration
 
 - **`cli.py`** — Main entry point with 8-flag interface (`-g`, `-f`, `--force`, `--zip`, `--source`, `--mcp`, `--no-deps`, `-n`).
-- **`clean_target.py`** — Fresh-sync cleaner for `--fresh` (preserves `skills/.venv`).
+- **`clean_target.py`** — Fresh-sync cleaner for `--fresh` (deletes real `.venv`, keeps symlinks).
 
 ### Source Resolution
 
@@ -26,7 +26,7 @@
 
 ### Asset & Skill Sync
 
-- **`asset_sync_dir.py`** — Live sync for assets and skills with registry-aware overwrite/backup behavior for managed assets.
+- **`asset_sync_dir.py`** — Live sync for assets, agents, and skills. Copies agents directly to `codex_home/agents/` for TOML conversion. Registry-aware overwrite/backup.
 - **`asset_sync_zip.py`** — Zip-based sync path.
 
 ### Normalization & Conversion
@@ -75,6 +75,6 @@ Configured Codex home (.codex project scope or ~/.codex global)
 |---|---|
 | `tests/test_config_enforcer.py` | 4 |
 | `tests/test_path_normalizer.py` | 7 |
-| `tests/test_clean_target.py` | 4 |
+| `tests/test_clean_target.py` | 5 |
 | `tests/test_cli_args.py` | 6 |
-| **Total** | **21** |
+| **Total** | **22** |

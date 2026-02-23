@@ -112,6 +112,28 @@ def sync_assets_from_dir(
         if registry and not dry_run and dst.exists():
             update_entry(registry, rel_path, src, dst)
 
+    # Copy agents directly to codex_home/agents/ (NOT claudekit/agents/)
+    # so convert_agents_md_to_toml() can find and convert them
+    agents_src = source / "agents"
+    if agents_src.exists():
+        agents_dst = codex_home / "agents"
+        if not dry_run:
+            agents_dst.mkdir(parents=True, exist_ok=True)
+        for src_file in sorted(agents_src.rglob("*.md")):
+            if not src_file.is_file():
+                continue
+            rel = src_file.relative_to(agents_src)
+            dst = agents_dst / rel
+            data = src_file.read_bytes()
+            changed, is_added = write_bytes_if_changed(dst, data, mode=None, dry_run=dry_run)
+            if changed:
+                if is_added:
+                    added += 1
+                    print(f"add: agents/{rel}")
+                else:
+                    updated += 1
+                    print(f"update: agents/{rel}")
+
     return {"added": added, "updated": updated, "removed": 0, "skipped": skipped}
 
 

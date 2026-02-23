@@ -1,6 +1,6 @@
 {
   "name": "claudekit-codex-sync",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Sync ClaudeKit skills, agents, and config to Codex CLI",
   "main": "bin/ck-codex-sync.js",
   "bin": {

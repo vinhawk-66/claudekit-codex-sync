@@ -13,7 +13,7 @@ ClaudeKit uses `~/.claude/` conventions and agent markdown frontmatter. Codex us
 | **Scope select** | Sync to project `./.codex/` (default) or global `~/.codex/` (`-g`) |
 | **Fresh clean** | Optional `-f` cleanup of target dirs before sync |
 | **Source resolve** | Uses live `~/.claude/` or `--zip` export |
-| **Asset sync** | Copies commands/output-styles/scripts and `.env.example` to `codex_home/claudekit/` |
+| **Asset sync** | Copies agents `.md` → `agents/` (for TOML conversion), commands/output-styles/rules/scripts → `codex_home/claudekit/` |
 | **Skill sync** | Copies skills into `codex_home/skills/` |
 | **Path normalize** | Rewrites `.claude` references to `.codex` |
 | **Config enforce** | Ensures `config.toml`, feature flags, and agent registration |
