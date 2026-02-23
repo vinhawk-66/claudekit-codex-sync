@@ -20,10 +20,9 @@ def normalize_files(
     include_mcp: bool,
     dry_run: bool,
 ) -> int:
-    """Normalize paths in skill files and claudekit files."""
+    """Normalize paths in skill files and asset files."""
     changed = 0
     skills_dir = codex_home / "skills"
-    claudekit_dir = codex_home / "claudekit"
 
     for path in sorted(skills_dir.rglob("SKILL.md")):
         if ".system" in path.parts:
@@ -39,15 +38,20 @@ def normalize_files(
             if not dry_run:
                 path.write_text(new_text, encoding="utf-8")
 
-    for path in sorted(claudekit_dir.rglob("*.md")):
-        rel = path.relative_to(codex_home).as_posix()
-        text = path.read_text(encoding="utf-8", errors="ignore")
-        new_text = apply_replacements(text, SKILL_MD_REPLACEMENTS)
-        if new_text != text:
-            changed += 1
-            print(f"normalize: {rel}")
-            if not dry_run:
-                path.write_text(new_text, encoding="utf-8")
+    # Normalize asset .md files (commands, output-styles, rules)
+    for subdir in ("commands", "output-styles", "rules"):
+        target_dir = codex_home / subdir
+        if not target_dir.exists():
+            continue
+        for path in sorted(target_dir.rglob("*.md")):
+            rel = path.relative_to(codex_home).as_posix()
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            new_text = apply_replacements(text, SKILL_MD_REPLACEMENTS)
+            if new_text != text:
+                changed += 1
+                print(f"normalize: {rel}")
+                if not dry_run:
+                    path.write_text(new_text, encoding="utf-8")
 
     copy_script = skills_dir / "copywriting" / "scripts" / "extract-writing-styles.py"
     if patch_copywriting_script(copy_script, dry_run=dry_run):
@@ -63,11 +67,11 @@ def normalize_files(
             default_style.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(fallback_style, default_style)
 
-    command_map = codex_home / "claudekit" / "commands" / "codex-command-map.md"
+    command_map = codex_home / "commands" / "codex-command-map.md"
     template = load_template("command-map.md")
     if write_text_if_changed(command_map, template, dry_run=dry_run):
         changed += 1
-        print("upsert: claudekit/commands/codex-command-map.md")
+        print("upsert: commands/codex-command-map.md")
 
     return changed
 
@@ -133,6 +137,7 @@ def convert_agents_md_to_toml(*, codex_home: Path, dry_run: bool) -> int:
 
         if not dry_run:
             toml_file.write_text(toml_content, encoding="utf-8")
+            md_file.unlink()  # Remove source .md — Codex only needs .toml
         converted += 1
         print(f"convert: agents/{md_file.name} → agents/{slug}.toml ({codex_model}, {sandbox})")
 

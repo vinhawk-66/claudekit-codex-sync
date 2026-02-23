@@ -22,10 +22,10 @@ def export_prompts(
     include_mcp: bool,
     dry_run: bool,
 ) -> Dict[str, int]:
-    """Export prompts from claudekit/commands to prompts directory."""
+    """Export prompts from commands to prompts directory."""
     from .utils import SyncError
 
-    source = codex_home / "claudekit" / "commands"
+    source = codex_home / "commands"
     prompts_dir = codex_home / "prompts"
     manifest_path = prompts_dir / PROMPT_MANIFEST
 

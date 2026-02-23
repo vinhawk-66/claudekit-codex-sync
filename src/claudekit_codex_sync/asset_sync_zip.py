@@ -35,9 +35,8 @@ def sync_assets(
     include_hooks: bool,
     dry_run: bool,
 ) -> Dict[str, int]:
-    """Sync non-skill assets from zip to codex_home/claudekit."""
-    claudekit_dir = codex_home / "claudekit"
-    manifest_path = claudekit_dir / ASSET_MANIFEST
+    """Sync non-skill assets from zip to codex_home."""
+    manifest_path = codex_home / ASSET_MANIFEST
     old_manifest = load_manifest(manifest_path)
 
     selected: List[Tuple[str, str]] = []
@@ -57,7 +56,7 @@ def sync_assets(
 
     for rel in sorted(old_manifest - new_manifest):
         safe_rel = _validate_zip_relpath(rel, rel)
-        target = claudekit_dir / safe_rel
+        target = codex_home / safe_rel
         if target.exists():
             removed += 1
             print(f"remove: {safe_rel}")
@@ -67,7 +66,7 @@ def sync_assets(
     for zip_name, rel in sorted(selected, key=lambda x: x[1]):
         info = zf.getinfo(zip_name)
         data = zf.read(zip_name)
-        dst = claudekit_dir / rel
+        dst = codex_home / rel
         changed, is_added = write_bytes_if_changed(dst, data, mode=zip_mode(info), dry_run=dry_run)
         if changed:
             if is_added:
@@ -78,11 +77,11 @@ def sync_assets(
                 print(f"update: {rel}")
 
     if not dry_run:
-        claudekit_dir.mkdir(parents=True, exist_ok=True)
+        codex_home.mkdir(parents=True, exist_ok=True)
     save_manifest(manifest_path, new_manifest, dry_run=dry_run)
 
     if not dry_run:
-        for d in sorted(claudekit_dir.rglob("*"), reverse=True):
+        for d in sorted(codex_home.rglob("*"), reverse=True):
             if d.is_dir():
                 try:
                     d.rmdir()

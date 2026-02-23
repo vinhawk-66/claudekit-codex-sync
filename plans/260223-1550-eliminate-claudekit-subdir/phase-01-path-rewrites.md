@@ -1,18 +1,22 @@
-"""Constants for path normalization and sync operations."""
+# Phase 1: Path Rewrites
 
-from typing import List, Set, Tuple
+**Priority:** Critical (all other phases depend on this)
+**Status:** `[ ]` Not started
+**File:** `src/claudekit_codex_sync/constants.py`
 
-ASSET_DIRS = {"commands", "output-styles", "rules", "scripts", "hooks"}
-ASSET_FILES = {".env.example", ".ck.json"}
-ASSET_MANIFEST = ".sync-manifest-assets.txt"
-PROMPT_MANIFEST = ".claudekit-generated-prompts.txt"
-REGISTRY_FILE = ".claudekit-sync-registry.json"
+## Overview
 
+Remove `claudekit/` from all replacement target paths in 3 replacement lists + 1 adaptation list.
 
-EXCLUDED_SKILLS_ALWAYS: Set[str] = {"template-skill"}
-MCP_SKILLS: Set[str] = {"mcp-builder", "mcp-management"}
-CONFLICT_SKILLS: Set[str] = {"skill-creator"}
+## Key Insight
 
+Every `claudekit/` in the target side of replacements becomes unnecessary when assets live at `codex_home/` directly.
+
+## Changes
+
+### SKILL_MD_REPLACEMENTS (L15-35)
+
+```python
 SKILL_MD_REPLACEMENTS: List[Tuple[str, str]] = [
     ("$HOME/.claude/skills/", "${CODEX_HOME:-$HOME/.codex}/skills/"),
     ("$HOME/.claude/scripts/", "${CODEX_HOME:-$HOME/.codex}/scripts/"),
@@ -34,7 +38,11 @@ SKILL_MD_REPLACEMENTS: List[Tuple[str, str]] = [
     ("`.claude`", "`.codex`"),
     ("$HOME/${CODEX_HOME:-$HOME/.codex}/", "${CODEX_HOME:-$HOME/.codex}/"),
 ]
+```
 
+### PROMPT_REPLACEMENTS (L37-52)
+
+```python
 PROMPT_REPLACEMENTS: List[Tuple[str, str]] = [
     ("$HOME/.claude/skills/", "${CODEX_HOME:-$HOME/.codex}/skills/"),
     ("$HOME/.claude/scripts/", "${CODEX_HOME:-$HOME/.codex}/scripts/"),
@@ -51,7 +59,11 @@ PROMPT_REPLACEMENTS: List[Tuple[str, str]] = [
     (".claude/.ck.json", "~/.codex/.ck.json"),
     ("$HOME/${CODEX_HOME:-$HOME/.codex}/", "${CODEX_HOME:-$HOME/.codex}/"),
 ]
+```
 
+### AGENT_TOML_REPLACEMENTS (L54-62)
+
+```python
 AGENT_TOML_REPLACEMENTS: List[Tuple[str, str]] = [
     ("$HOME/.claude/skills/", "${CODEX_HOME:-$HOME/.codex}/skills/"),
     ("$HOME/.claude/scripts/", "${CODEX_HOME:-$HOME/.codex}/scripts/"),
@@ -61,34 +73,13 @@ AGENT_TOML_REPLACEMENTS: List[Tuple[str, str]] = [
     ("$HOME/.claude/", "${CODEX_HOME:-$HOME/.codex}/"),
     ("~/.claude/", "~/.codex/"),
 ]
+```
 
-CLAUDE_SYNTAX_ADAPTATIONS: List[Tuple[str, str]] = [
-    ("Task(Explore)", "the explore agent"),
-    ("Task(researcher)", "the researcher agent"),
-    ("Task(", "delegate to "),
-    ("$HOME/.claude/skills/*", "${CODEX_HOME:-$HOME/.codex}/skills/*"),
-]
+## Todo
 
-# Claude model → Codex model mapping (per developers.openai.com/codex/multi-agent)
-CLAUDE_TO_CODEX_MODELS: dict[str, str] = {
-    "opus": "gpt-5.3-codex",
-    "sonnet": "gpt-5.3-codex",
-    "haiku": "gpt-5.3-codex-spark",
-    "inherit": "",
-}
+- [ ] Replace all 3 lists + remove double-expansion fix
+- [ ] Compile check
 
-# Reasoning effort per Claude model tier
-CLAUDE_MODEL_REASONING_EFFORT: dict[str, str] = {
-    "opus": "xhigh",
-    "sonnet": "high",
-    "haiku": "medium",
-}
+## Success Criteria
 
-# Agents that should be read-only (no file writes needed)
-READ_ONLY_AGENT_ROLES: Set[str] = {
-    "brainstormer",
-    "code_reviewer",
-    "researcher",
-    "project_manager",
-    "journal_writer",
-}
+`grep -c "claudekit" constants.py` returns 0 (except REGISTRY_FILE and PROMPT_MANIFEST names)

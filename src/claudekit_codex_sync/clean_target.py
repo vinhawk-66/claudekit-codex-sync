@@ -7,10 +7,11 @@ from pathlib import Path
 
 
 def clean_target(codex_home: Path, *, dry_run: bool) -> int:
-    """Remove agents, skills (keep .venv), prompts, claudekit before fresh sync."""
+    """Remove agents, skills (keep .venv), prompts, asset dirs before fresh sync."""
     removed = 0
 
-    for subdir in ("agents", "prompts", "claudekit"):
+    # Clean top-level asset dirs (was: "agents", "prompts", "claudekit")
+    for subdir in ("agents", "prompts", "commands", "output-styles", "rules", "scripts", "hooks"):
         target = codex_home / subdir
         if target.exists():
             count = sum(1 for item in target.rglob("*") if item.is_file())
@@ -45,10 +46,13 @@ def clean_target(codex_home: Path, *, dry_run: bool) -> int:
                     item.unlink()
         print("fresh: rm skills/* (kept .venv)")
 
+    # Clean top-level files (add .ck.json, .env.example)
     for name in (
         ".claudekit-sync-registry.json",
         ".sync-manifest-assets.txt",
         ".claudekit-generated-prompts.txt",
+        ".ck.json",
+        ".env.example",
     ):
         target = codex_home / name
         if target.exists():

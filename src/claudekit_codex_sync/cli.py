@@ -162,12 +162,7 @@ def main() -> int:
     changed = normalize_files(codex_home=codex_home, include_mcp=args.mcp, dry_run=args.dry_run)
     print(f"normalize_changed={changed}")
 
-    agent_toml_changed = normalize_agent_tomls(codex_home=codex_home, dry_run=args.dry_run)
-    print(f"agent_toml_changed={agent_toml_changed}")
-
-    agents_registered = register_agents(codex_home=codex_home, dry_run=args.dry_run)
-    print(f"agents_registered={agents_registered}")
-
+    # enforce_config BEFORE register_agents — enforce_config rewrites config.toml
     baseline_changed = 0
     if ensure_agents(workspace=workspace, dry_run=args.dry_run):
         baseline_changed += 1
@@ -177,8 +172,18 @@ def main() -> int:
         baseline_changed += 1
 
     config_path = codex_home / "config.toml"
-    enforce_multi_agent_flag(config_path, dry_run=args.dry_run)
+    if enforce_multi_agent_flag(config_path, dry_run=args.dry_run):
+        print(f"upsert: multi_agent = true in {config_path}")
+
     print(f"baseline_changed={baseline_changed}")
+
+    # Convert .md → .toml and normalize BEFORE registering
+    agent_toml_changed = normalize_agent_tomls(codex_home=codex_home, dry_run=args.dry_run)
+    print(f"agent_toml_changed={agent_toml_changed}")
+
+    # register_agents AFTER .toml files exist and config is stable
+    agents_registered = register_agents(codex_home=codex_home, dry_run=args.dry_run)
+    print(f"agents_registered={agents_registered}")
 
     prompt_stats = export_prompts(codex_home=codex_home, include_mcp=args.mcp, dry_run=args.dry_run)
     print(f"prompts: added={prompt_stats['added']} total={prompt_stats['total_generated']}")

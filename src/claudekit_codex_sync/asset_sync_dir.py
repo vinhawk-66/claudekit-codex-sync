@@ -21,16 +21,13 @@ def sync_assets_from_dir(
     force: bool = True,
 ) -> Dict[str, int]:
     """Sync non-skill assets from live directory."""
-    claudekit_dir = codex_home / "claudekit"
-    if not dry_run:
-        claudekit_dir.mkdir(parents=True, exist_ok=True)
     added = updated = skipped = 0
 
     for dirname in ASSET_DIRS:
         src_dir = source / dirname
         if not src_dir.exists():
             continue
-        dst_dir = claudekit_dir / dirname
+        dst_dir = codex_home / dirname
         if not dry_run:
             dst_dir.mkdir(parents=True, exist_ok=True)
 
@@ -38,7 +35,7 @@ def sync_assets_from_dir(
             if not src_file.is_file() or is_excluded_path(src_file.parts):
                 continue
             rel = src_file.relative_to(src_dir)
-            rel_path = f"claudekit/{dirname}/{rel}"
+            rel_path = f"{dirname}/{rel}"
             dst = dst_dir / rel
 
             if not force and registry and dst.exists():
@@ -77,8 +74,8 @@ def sync_assets_from_dir(
         src = source / filename
         if not src.exists():
             continue
-        rel_path = f"claudekit/{filename}"
-        dst = claudekit_dir / filename
+        rel_path = filename
+        dst = codex_home / filename
 
         if not force and registry and dst.exists():
             entry = registry.get("entries", {}).get(rel_path)

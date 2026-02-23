@@ -38,7 +38,7 @@ def test_ck_json_replacement():
     """Test .ck.json path replacement."""
     text = "~/.claude/.ck.json"
     result = apply_replacements(text, SKILL_MD_REPLACEMENTS)
-    assert result == "~/.codex/claudekit/.ck.json"
+    assert result == "~/.codex/.ck.json"
 
 
 def test_no_change_for_non_claude():
