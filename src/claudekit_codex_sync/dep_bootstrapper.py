@@ -88,24 +88,28 @@ def bootstrap_deps(
         run_cmd(["python3", "-m", "venv", str(venv_dir)], dry_run=dry_run)
         run_cmd([str(py_bin), "-m", "pip", "install", "--upgrade", "pip"], dry_run=dry_run)
 
-    req_files = sorted(skills_dir.rglob("requirements*.txt"))
-    for req in req_files:
-        if is_excluded_path(req.parts):
-            continue
-        if not include_mcp and ("mcp-builder" in req.parts or "mcp-management" in req.parts):
-            continue
-        try:
-            run_cmd([str(py_bin), "-m", "pip", "install", "-r", str(req)], dry_run=dry_run)
-            py_ok += 1
-        except subprocess.CalledProcessError:
-            py_fail += 1
-            eprint(f"python deps failed: {req}")
+    # Skip dependency install when venv is symlinked — packages already in source
+    if not symlinked:
+        req_files = sorted(skills_dir.rglob("requirements*.txt"))
+        for req in req_files:
+            if is_excluded_path(req.parts):
+                continue
+            if not include_mcp and ("mcp-builder" in req.parts or "mcp-management" in req.parts):
+                continue
+            try:
+                run_cmd([str(py_bin), "-m", "pip", "install", "-r", str(req)], dry_run=dry_run)
+                py_ok += 1
+            except subprocess.CalledProcessError:
+                py_fail += 1
+                eprint(f"python deps failed: {req}")
 
-    node_ok, node_fail = _install_node_deps(
-        skills_dir=skills_dir,
-        include_mcp=include_mcp,
-        dry_run=dry_run,
-    )
+        node_ok, node_fail = _install_node_deps(
+            skills_dir=skills_dir,
+            include_mcp=include_mcp,
+            dry_run=dry_run,
+        )
+    else:
+        print("skip: deps install (venv symlinked, packages shared)")
 
     return {
         "python_ok": py_ok,
