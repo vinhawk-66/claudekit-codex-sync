@@ -10,8 +10,8 @@ def clean_target(codex_home: Path, *, dry_run: bool) -> int:
     """Remove agents, skills (keep .venv), prompts, asset dirs before fresh sync."""
     removed = 0
 
-    # Clean top-level asset dirs (was: "agents", "prompts", "claudekit")
-    for subdir in ("agents", "prompts", "commands", "output-styles", "rules", "scripts", "hooks"):
+    # Clean top-level asset dirs + legacy claudekit/ from pre-v0.2.3
+    for subdir in ("agents", "prompts", "commands", "output-styles", "rules", "scripts", "hooks", "claudekit"):
         target = codex_home / subdir
         if target.exists():
             count = sum(1 for item in target.rglob("*") if item.is_file())
