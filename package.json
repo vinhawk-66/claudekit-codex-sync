@@ -1,6 +1,6 @@
 {
   "name": "claudekit-codex-sync",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Sync ClaudeKit skills, agents, and config to Codex CLI",
   "main": "bin/ck-codex-sync.js",
   "bin": {
@@ -12,6 +12,11 @@
     "test": "PYTHONPATH=src python3 -m pytest tests/",
     "lint": "python3 -m py_compile src/claudekit_codex_sync/*.py"
   },
-  "keywords": ["claudekit", "codex", "sync", "skills"],
+  "keywords": [
+    "claudekit",
+    "codex",
+    "sync",
+    "skills"
+  ],
   "license": "MIT"
 }
