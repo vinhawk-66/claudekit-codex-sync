@@ -24,7 +24,10 @@ ClaudeKit stores agent definitions (`.md` with YAML frontmatter), skills, prompt
 ## Installation
 
 ```bash
-# Clone and install globally
+# Install from npm registry
+npm install -g claudekit-codex-sync
+
+# Or install from source
 git clone https://github.com/vinhawk-66/claudekit-codex-sync.git
 cd claudekit-codex-sync
 npm install -g .

@@ -1,49 +1,60 @@
 # Codex vs Claude Agents
 
-This document outlines the differences between Claude Code agents and Codex agents, and what is lost or preserved during sync.
+Differences between Claude Code (ClaudeKit) agents and Codex CLI agents, and how this sync tool handles the translation.
 
-## Key Differences
+## Agent Definition Format
 
-| Feature | Claude Code | Codex CLI |
-|---------|-------------|-----------|
-| **Agent Definition** | TOML files with `[[agents]]` sections | TOML files with `[[agents]]` sections |
-| **Model Selection** | `model` frontmatter field | No per-agent model selection |
-| **Tool Restrictions** | `tools` frontmatter field | No tool restrictions (all tools available) |
-| **Memory** | `memory` frontmatter field | `developer_instructions` text only |
-| **Delegation** | `Task()` tool for explicit delegation | Auto-spawn via `multi_agent = true` |
+| Aspect | Claude Code (ClaudeKit) | Codex CLI |
+|---|---|---|
+| **File format** | `.md` with YAML frontmatter | `.toml` |
+| **Instructions** | Markdown body below `---` | `developer_instructions = """..."""` |
+| **Model** | `model: opus/sonnet/haiku` | `model = "gpt-5.3-codex"` (per-agent override) |
+| **Reasoning** | Not configurable | `model_reasoning_effort = "xhigh/high/medium"` |
+| **Sandbox** | Not configurable | `sandbox_mode = "read-only/workspace-write"` |
+| **Tools** | `tools: [Glob, Grep, Read, ...]` | All tools available (no restriction) |
+| **Delegation** | `Task(planner)` explicit call | Auto-spawn by model + `/agent` to switch threads |
+| **Memory** | `memory: project` field | Instructions text + AGENTS.md |
 
-## What Transfers
+## What the Sync Preserves
 
-The following are preserved during ClaudeKit -> Codex sync:
+- ✅ Agent name and slug
+- ✅ Developer instructions (full markdown body)
+- ✅ Description (from YAML frontmatter)
+- ✅ Model selection → mapped to Codex equivalents
+- ✅ Sandbox mode settings
+- ✅ File structure (`~/.codex/agents/`)
+- ✅ Config registration (`[agents.*]` in config.toml)
 
-- **Agent name and description** - Basic identity
-- **Developer instructions** - Core behavior guidance
-- **Sandbox mode settings** - Security constraints
-- **Agent file structure** - Organized in `~/.codex/agents/`
+## What Changes
 
-## What's Lost
+### Model Mapping
 
-The following Claude-specific features are stripped or adapted:
+The sync automatically maps Claude model names to Codex equivalents:
 
-1. **Explicit Task() delegation syntax**
-   - Claude: `Task(subagent_type="researcher", ...)`
-   - Codex: Auto-spawn based on context
+```
+opus   → gpt-5.3-codex       + model_reasoning_effort = "xhigh"
+sonnet → gpt-5.3-codex       + model_reasoning_effort = "high"
+haiku  → gpt-5.3-codex-spark + model_reasoning_effort = "medium"
+```
 
-2. **Tool restrictions**
-   - Claude: `tools = ["Read", "Grep", "Edit"]` limits available tools
-   - Codex: All tools available to all agents
+### Sandbox Assignment
 
-3. **Model selection**
-   - Claude: `model = "haiku"` for cost/performance tuning
-   - Codex: Single model for all operations
+Agents that only read/analyze get `sandbox_mode = "read-only"`:
+- brainstormer, code_reviewer, researcher, project_manager, journal_writer
 
-4. **Memory configuration**
-   - Claude: `memory` section with context management
-   - Codex: Instructions embedded in developer text
+Agents that write code get `sandbox_mode = "workspace-write"`:
+- planner, debugger, fullstack_developer, tester, code_simplifier, etc.
 
-## Path Normalization
+### Delegation Syntax
 
-Agent TOMLs are automatically normalized during sync:
+```diff
+- Task(subagent_type="researcher", ...)
++ delegate to the researcher agent
+```
+
+`Task()` calls are rewritten to natural language since Codex uses model-driven auto-spawning.
+
+### Path Normalization
 
 ```diff
 - $HOME/.claude/skills/
@@ -53,22 +64,22 @@ Agent TOMLs are automatically normalized during sync:
 + ~/.codex/
 ```
 
-## Multi-Agent Configuration
+## What's Not Supported
 
-After sync, enable multi-agent mode:
+- **Tool restrictions**: Claude's `tools = [...]` field is dropped — Codex gives all tools to all agents
+- **Memory config**: Claude's `memory: project` is dropped — use `developer_instructions` text instead
+- **Explicit model names**: Claude-specific model names are replaced, not preserved
+
+## Multi-Agent in Codex
+
+After sync, Codex supports multi-agent workflows via:
 
 ```toml
 [features]
 multi_agent = true
+child_agents_md = true
 ```
 
-This allows Codex to auto-spawn sub-agents based on task context, similar to Claude's `Task()` delegation but without explicit syntax.
+Built-in roles: `default`, `worker`, `explorer`. Custom roles (from your synced agents) are spawned by the model based on `description` in `[agents.*]` config sections.
 
-## Recommendation
-
-For maximum compatibility:
-
-1. Write agent instructions assuming all tools are available
-2. Use natural language for delegation intent (e.g., "use the researcher agent")
-3. Keep agent instructions under 2000 tokens
-4. Test agents after sync to verify behavior
+Use `/agent` in interactive Codex CLI to switch between active sub-agent threads.
