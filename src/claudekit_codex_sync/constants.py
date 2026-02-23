@@ -2,9 +2,10 @@
 
 from typing import List, Set, Tuple
 
-ASSET_DIRS = {"commands", "output-styles", "rules", "scripts", "hooks"}
+ASSET_DIRS = {"output-styles", "rules", "scripts"}
 ASSET_FILES = {".env.example", ".ck.json"}
 ASSET_MANIFEST = ".sync-manifest-assets.txt"
+# DEPRECATED: prompt_exporter.py no longer called from CLI pipeline (v0.2.5)
 PROMPT_MANIFEST = ".claudekit-generated-prompts.txt"
 REGISTRY_FILE = ".claudekit-sync-registry.json"
 
@@ -67,6 +68,9 @@ CLAUDE_SYNTAX_ADAPTATIONS: List[Tuple[str, str]] = [
     ("Task(researcher)", "the researcher agent"),
     ("Task(", "delegate to "),
     ("$HOME/.claude/skills/*", "${CODEX_HOME:-$HOME/.codex}/skills/*"),
+    ("via Task tool", "via agent delegation"),
+    ("Claude Code", "Codex CLI"),
+    ("claude code", "Codex CLI"),
 ]
 
 # Claude model → Codex model mapping (per developers.openai.com/codex/multi-agent)

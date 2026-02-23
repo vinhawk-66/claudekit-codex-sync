@@ -22,7 +22,7 @@ from .config_enforcer import (
 )
 from .dep_bootstrapper import bootstrap_deps
 from .path_normalizer import normalize_agent_tomls, normalize_files
-from .prompt_exporter import export_prompts
+from .rules_generator import generate_hook_rules
 from .runtime_verifier import verify_runtime
 from .source_resolver import detect_claude_source, find_latest_zip, validate_source
 from .sync_registry import load_registry, save_registry
@@ -162,6 +162,9 @@ def main() -> int:
     changed = normalize_files(codex_home=codex_home, include_mcp=args.mcp, dry_run=args.dry_run)
     print(f"normalize_changed={changed}")
 
+    rules_generated = generate_hook_rules(codex_home=codex_home, dry_run=args.dry_run)
+    print(f"hook_rules_generated={rules_generated}")
+
     # enforce_config BEFORE register_agents — enforce_config rewrites config.toml
     baseline_changed = 0
     if ensure_agents(workspace=workspace, dry_run=args.dry_run):
@@ -184,9 +187,6 @@ def main() -> int:
     # register_agents AFTER .toml files exist and config is stable
     agents_registered = register_agents(codex_home=codex_home, dry_run=args.dry_run)
     print(f"agents_registered={agents_registered}")
-
-    prompt_stats = export_prompts(codex_home=codex_home, include_mcp=args.mcp, dry_run=args.dry_run)
-    print(f"prompts: added={prompt_stats['added']} total={prompt_stats['total_generated']}")
 
     bootstrap_stats = None
     if not args.no_deps:
@@ -219,7 +219,7 @@ def main() -> int:
         "normalize_changed": changed,
         "agent_toml_changed": agent_toml_changed,
         "agents_registered": agents_registered,
-        "prompts": prompt_stats,
+        "rules_generated": rules_generated,
         "bootstrap": bootstrap_stats,
         "verify": verify_stats,
     }

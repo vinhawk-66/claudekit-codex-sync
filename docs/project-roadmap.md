@@ -26,6 +26,18 @@
 - [x] Documentation refresh for new CLI contract
 - [x] Removed legacy standalone `scripts/` and stale `reports/`
 
+## v0.2.5 - Hooks→Rules + Remove Prompts
+
+**Status:** Complete
+
+- [x] Remove hooks sync (Codex has no hooks API)
+- [x] Generate hook-equivalent rules (security-privacy, file-naming, code-quality)
+- [x] Remove commands sync (deprecated concept)
+- [x] Remove prompt export step (deprecated by OpenAI)
+- [x] Update bridge skill for Codex-native routing
+- [x] Add syntax adaptations for Claude→Codex patterns
+- [x] Add test coverage for rules_generator
+
 ## v0.3.0 - Coverage + Reliability
 
 **Status:** Planned

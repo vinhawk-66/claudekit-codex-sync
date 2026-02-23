@@ -8,12 +8,10 @@
 │ ~/.claude/ or zip    │───▶│ ./.codex or ~/.codex      │
 │   agents/*.md        │    │   agents/*.toml (convert) │
 │   skills/*           │    │   skills/*                │
-│   commands/          │    │   commands/               │
 │   output-styles/     │    │   output-styles/          │
 │   rules/             │    │   rules/                  │
 │   scripts/           │    │   scripts/                │
-└─────────────────────┘    │   prompts/* (generated)   │
-                            │   config.toml             │
+└─────────────────────┘    │   config.toml             │
                             └──────────────────────────┘
 ```
 
@@ -28,7 +26,7 @@ Workspace baseline: `./AGENTS.md` is ensured in the current working directory.
 
 2. **Asset/skill sync**
 - Copy agents `.md` directly to `codex_home/agents/` (for TOML conversion)
-- Copy managed assets (commands, output-styles, rules, scripts) to `codex_home/` directly
+- Copy managed assets (output-styles, rules, scripts) to `codex_home/` directly
 - Copy skills to `codex_home/skills/`
 - Apply registry-aware overwrite behavior (`--force`)
 
@@ -43,8 +41,8 @@ Workspace baseline: `./AGENTS.md` is ensured in the current working directory.
 - Register agents from `agents/*.toml`
 - Ensure workspace-level `AGENTS.md` baseline file exists
 
-5. **Prompt export**
-- Generate prompt files for Codex runtime from `commands/*.md`
+5. **Hook rules generation**
+- Generate rules/ from hook behavior templates (security-privacy, file-naming, code-quality)
 
 6. **Dependency bootstrap**
 - Try symlink reuse of `~/.claude/skills/.venv`

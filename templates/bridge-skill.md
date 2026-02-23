@@ -1,11 +1,11 @@
 ---
 name: claudekit-command-bridge
-description: Bridge legacy ClaudeKit commands to Codex-native workflows. Use when users mention /ck-help, /coding-level, /ask, /docs/*, /journal, /watzup, or ask for Claude command equivalents.
+description: Bridge legacy ClaudeKit slash commands to Codex-native skills. Activates when users mention /ck-help, /coding-level, /ask, /docs/*, /journal, /watzup, or ask for Claude command equivalents.
 ---
 
-# ClaudeKit Command Bridge
+# ClaudeKit → Codex Bridge
 
-Translate ClaudeKit command intent into Codex skills/workflows.
+Translate ClaudeKit command intent into Codex-native skills.
 
 ## Quick Mapping
 
