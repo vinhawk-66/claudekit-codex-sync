@@ -83,6 +83,8 @@ def convert_agents_md_to_toml(*, codex_home: Path, dry_run: bool) -> int:
     agents_dir = codex_home / "agents"
     if not agents_dir.exists():
         return 0
+    if not dry_run:
+        agents_dir.mkdir(parents=True, exist_ok=True)
 
     converted = 0
     for md_file in sorted(agents_dir.glob("*.md")):

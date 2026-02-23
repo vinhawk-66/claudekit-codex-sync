@@ -3,9 +3,9 @@
 ## Prerequisites
 
 - Python 3.12+
-- Node.js 18+ (for npm)
+- Node.js 18+
 - [Codex CLI](https://developers.openai.com/codex/cli) installed (`npm install -g @openai/codex`)
-- ClaudeKit installed (`~/.claude/` directory exists with agents and skills)
+- ClaudeKit installed (`~/.claude/` exists) or exported ClaudeKit zip
 
 ## Install via npm
 
@@ -24,74 +24,85 @@ npm install -g .
 ## Verify Installation
 
 ```bash
+ckc-sync --help
 ck-codex-sync --help
 ```
 
 ## Usage
 
-### Sync from live `~/.claude/` directory (recommended)
+### Project sync (default target: `./.codex/`)
 
 ```bash
-ck-codex-sync --source-mode live
+ckc-sync
 ```
 
-### Sync from ClaudeKit export zip
+### Global sync (`~/.codex/`)
 
 ```bash
-ck-codex-sync --zip path/to/claudekit-export.zip
+ckc-sync -g
 ```
 
-### Preview without making changes
+### Fresh re-sync
 
 ```bash
-ck-codex-sync --source-mode live --dry-run
+ckc-sync -g -f
 ```
 
-### Include MCP skills
+### Preview only
 
 ```bash
-ck-codex-sync --source-mode live --include-mcp
+ckc-sync -g -n
 ```
 
-### Full options
+### Zip source
+
+```bash
+ckc-sync --zip path/to/claudekit-export.zip --force
+```
+
+### Custom live source
+
+```bash
+ckc-sync --source /path/to/.claude
+```
+
+## Full Options
 
 ```
---source-mode {auto,live,zip}   Source selection (default: auto)
---source-dir PATH               Custom source directory for live mode
---zip PATH                      Specific ClaudeKit zip path
---codex-home PATH               Codex home (default: $CODEX_HOME or ~/.codex)
---workspace PATH                Workspace root for AGENTS.md
---include-mcp                   Include MCP skills/prompts
---include-hooks                 Include hooks
---include-conflicts             Include conflicting skills
---include-test-deps             Install test requirements
---skip-bootstrap                Skip dependency bootstrap
---skip-verify                   Skip runtime verification
---skip-agent-toml               Skip agent TOML normalization
---respect-edits                 Backup user-edited files
---dry-run                       Preview changes only
+-g, --global      Sync to ~/.codex/ (default: ./.codex/)
+-f, --fresh       Clean target dirs before sync
+--force           Overwrite user-edited files without backup (required for zip write mode)
+--zip PATH        Sync from zip instead of live ~/.claude/
+--source PATH     Custom source dir (default: ~/.claude/)
+--mcp             Include MCP skills
+--no-deps         Skip dependency bootstrap (venv)
+-n, --dry-run     Preview only
 ```
 
 ## What Gets Synced
 
-| Source (`~/.claude/`) | Destination (`~/.codex/`) |
+| Source/Input | Destination |
 |---|---|
-| `agents/*.md` | `agents/*.toml` (converted + model mapped) |
-| `skills/*/` | `skills/*/` (paths normalized) |
-| `commands/` | `claudekit/commands/` |
-| `rules/` | `claudekit/rules/` |
-| `scripts/` | `claudekit/scripts/` |
-| prompt files | `prompts/` (exported) |
+| `skills/*/` | `codex_home/skills/*/` |
+| `commands/` | `codex_home/claudekit/commands/` |
+| `output-styles/` | `codex_home/claudekit/output-styles/` |
+| `scripts/` | `codex_home/claudekit/scripts/` |
+| `.env.example` | `codex_home/claudekit/.env.example` |
+| Generated from `codex_home/claudekit/commands/*.md` | `codex_home/prompts/*.md` |
+
+Notes:
+- In zip mode, `hooks/` entries are also synced to `codex_home/claudekit/hooks/`.
 
 ## Post-Install
 
-After sync, launch Codex CLI to verify:
+After sync:
 
 ```bash
-cxp --full-auto   # or however you launch Codex
+codex --help
 ```
 
-The sync automatically:
-- Enables `multi_agent = true` and `child_agents_md = true`
-- Registers all agent roles in `config.toml`
-- Sets correct model per agent (see [model mapping](../README.md#agent-model-mapping))
+The sync process enforces:
+- `[features] multi_agent = true`
+- `[features] child_agents_md = true`
+- Bridge skill setup
+- Agent registration for available `codex_home/agents/*.toml`

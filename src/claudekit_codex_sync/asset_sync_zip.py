@@ -16,7 +16,16 @@ from .constants import (
     MCP_SKILLS,
 )
 from .source_resolver import collect_skill_entries, zip_mode
-from .utils import load_manifest, save_manifest, write_bytes_if_changed
+from .utils import SyncError, load_manifest, save_manifest, write_bytes_if_changed
+
+
+def _validate_zip_relpath(rel: str, zip_name: str) -> str:
+    """Validate zip relative path and return normalized form."""
+    normalized = rel.replace("\\", "/")
+    path = Path(normalized)
+    if path.is_absolute() or ".." in path.parts:
+        raise SyncError(f"Unsafe zip entry path: {zip_name}")
+    return normalized
 
 
 def sync_assets(
@@ -35,7 +44,7 @@ def sync_assets(
     for name in zf.namelist():
         if name.endswith("/") or not name.startswith(".claude/"):
             continue
-        rel = name[len(".claude/") :]
+        rel = _validate_zip_relpath(name[len(".claude/") :], name)
         first = rel.split("/", 1)[0]
         if first == "hooks" and include_hooks:
             selected.append((name, rel))
@@ -47,10 +56,11 @@ def sync_assets(
     added = updated = removed = 0
 
     for rel in sorted(old_manifest - new_manifest):
-        target = claudekit_dir / rel
+        safe_rel = _validate_zip_relpath(rel, rel)
+        target = claudekit_dir / safe_rel
         if target.exists():
             removed += 1
-            print(f"remove: {rel}")
+            print(f"remove: {safe_rel}")
             if not dry_run:
                 target.unlink()
 
@@ -135,6 +145,7 @@ def sync_skills(
             dst = dst_skill_dir / inner
             write_bytes_if_changed(dst, data, mode=zip_mode(info), dry_run=False)
 
-    skills_dir.mkdir(parents=True, exist_ok=True)
+    if not dry_run:
+        skills_dir.mkdir(parents=True, exist_ok=True)
     total_skills = len(list(skills_dir.rglob("SKILL.md")))
     return {"added": added, "updated": updated, "skipped": skipped, "total_skills": total_skills}

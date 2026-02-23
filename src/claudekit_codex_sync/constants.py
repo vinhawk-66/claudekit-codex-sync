@@ -2,19 +2,8 @@
 
 from typing import List, Set, Tuple
 
-ASSET_DIRS = {"agents", "commands", "output-styles", "rules", "scripts"}
-ASSET_FILES = {
-    "CLAUDE.md",
-    ".ck.json",
-    ".ckignore",
-    ".env.example",
-    ".mcp.json.example",
-    "settings.json",
-    "metadata.json",
-    "statusline.cjs",
-    "statusline.sh",
-    "statusline.ps1",
-}
+ASSET_DIRS = {"commands", "output-styles", "scripts"}
+ASSET_FILES = {".env.example"}
 ASSET_MANIFEST = ".sync-manifest-assets.txt"
 PROMPT_MANIFEST = ".claudekit-generated-prompts.txt"
 REGISTRY_FILE = ".claudekit-sync-registry.json"

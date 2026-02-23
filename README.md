@@ -1,25 +1,25 @@
 # claudekit-codex-sync
 
-Sync [ClaudeKit](https://github.com/anthropics/claudekit) skills, agents, prompts, and configuration to [Codex CLI](https://developers.openai.com/codex).
+Sync [ClaudeKit](https://github.com/anthropics/claudekit) skills, config assets, prompts, and runtime setup to [Codex CLI](https://developers.openai.com/codex).
 
 ## Problem
 
-ClaudeKit stores agent definitions (`.md` with YAML frontmatter), skills, prompts, and config under `~/.claude/`. Codex CLI uses a different layout under `~/.codex/` with `.toml` agents, GPT model names, and TOML-based config. Manually migrating is tedious and error-prone.
+ClaudeKit uses `~/.claude/` conventions and agent markdown frontmatter. Codex uses `~/.codex/`, TOML config, and different runtime defaults. Manual migration is slow and error-prone.
 
 ## What It Does
 
 | Step | Action |
 |---|---|
-| **Source resolve** | Detects `~/.claude/` (live) or ClaudeKit export zip |
-| **Asset sync** | Copies agents, commands, rules, scripts → `~/.codex/claudekit/` |
-| **Skill sync** | Copies 54+ skills → `~/.codex/skills/` |
-| **Path normalize** | Rewrites `.claude` → `.codex` in all synced files |
-| **Agent convert** | `.md` (YAML frontmatter) → `.toml` with model mapping |
-| **Model mapping** | `opus → gpt-5.3-codex`, `haiku → gpt-5.3-codex-spark` |
-| **Config enforce** | Sets `multi_agent`, `child_agents_md`, registers `[agents.*]` |
+| **Scope select** | Sync to project `./.codex/` (default) or global `~/.codex/` (`-g`) |
+| **Fresh clean** | Optional `-f` cleanup of target dirs before sync |
+| **Source resolve** | Uses live `~/.claude/` or `--zip` export |
+| **Asset sync** | Copies commands/output-styles/scripts and `.env.example` to `codex_home/claudekit/` |
+| **Skill sync** | Copies skills into `codex_home/skills/` |
+| **Path normalize** | Rewrites `.claude` references to `.codex` |
+| **Config enforce** | Ensures `config.toml`, feature flags, and agent registration |
 | **Prompt export** | Generates Codex-compatible prompt files |
-| **Dep bootstrap** | Installs Python/Node deps for skills requiring them |
-| **Runtime verify** | Health-checks the synced environment |
+| **Dep bootstrap** | Symlink-first venv strategy, fallback install |
+| **Runtime verify** | Health-checks synced environment |
 
 ## Installation
 
@@ -33,41 +33,60 @@ cd claudekit-codex-sync
 npm install -g .
 ```
 
+## Quick Start
+
+```bash
+# Project sync (to ./.codex/)
+ckc-sync
+
+# Global sync (to ~/.codex/)
+ckc-sync -g
+
+# Fresh global re-sync
+ckc-sync -g -f
+
+# Preview only
+ckc-sync -g -n
+```
+
 ## Usage
 
 ```bash
-# Sync from live ~/.claude/ directory
-ck-codex-sync --source-mode live
+# Custom live source (instead of ~/.claude)
+ckc-sync --source /path/to/.claude
 
 # Sync from exported zip
-ck-codex-sync --zip claudekit-export.zip
-
-# Preview without changes
-ck-codex-sync --source-mode live --dry-run
+ckc-sync --zip claudekit-export.zip --force
 
 # Include MCP skills
-ck-codex-sync --source-mode live --include-mcp
+ckc-sync --mcp
+
+# Skip dependency bootstrap
+ckc-sync --no-deps
+
+# Overwrite user-edited managed assets
+ckc-sync --force
+
+# Backward-compatible command name
+ck-codex-sync -g -n
 ```
 
 ## CLI Options
 
 ```
---source-mode live|zip|auto   Source selection (default: auto)
---source-dir PATH             Custom source directory
---zip PATH                    Specific zip file
---codex-home PATH             Codex home (default: ~/.codex)
---include-mcp                 Include MCP skills
---include-hooks               Include hooks
---skip-bootstrap              Skip dependency installation
---skip-verify                 Skip runtime verification
---skip-agent-toml             Skip agent TOML normalization
---respect-edits               Backup user-edited files
---dry-run                     Preview mode
+-g, --global      Sync to ~/.codex/ (default: ./.codex/)
+-f, --fresh       Clean target dirs before sync
+--force           Overwrite user-edited files without backup (required for zip write mode)
+--zip PATH        Sync from zip instead of live ~/.claude/
+--source PATH     Custom source dir (default: ~/.claude/)
+--mcp             Include MCP skills
+--no-deps         Skip dependency bootstrap (venv)
+-n, --dry-run     Preview only
 ```
 
 ## Agent Model Mapping
 
-Per [official Codex docs](https://developers.openai.com/codex/multi-agent), each agent role can override `model`, `model_reasoning_effort`, and `sandbox_mode`:
+Per [official Codex docs](https://developers.openai.com/codex/multi-agent):
 
 | Claude Model | Codex Model | Reasoning | Used By |
 |---|---|---|---|
@@ -75,35 +94,30 @@ Per [official Codex docs](https://developers.openai.com/codex/multi-agent), each
 | `sonnet` | `gpt-5.3-codex` | high | debugger, fullstack_developer |
 | `haiku` | `gpt-5.3-codex-spark` | medium | researcher, tester, docs_manager |
 
-Read-only agents (brainstormer, code_reviewer, researcher, project_manager, journal_writer) get `sandbox_mode = "read-only"`.
-
-## Related Tools
-
-- **[ccs](https://www.npmjs.com/package/@kaitranntt/ccs)** (`@kaitranntt/ccs`) — Claude Code Profile & Model Switcher. Allows running Claude Code with different model backends including Codex models via CLIProxy. Example: `ccs codex` launches Claude Code using Codex as the backend model.
-- **[Codex CLI](https://github.com/openai/codex)** (`@openai/codex`) — OpenAI's coding agent CLI.
+Read-only roles remain: brainstormer, code_reviewer, researcher, project_manager, journal_writer.
 
 ## Project Structure
 
 ```
-├── bin/ck-codex-sync.js           # npm CLI entry point
-├── src/claudekit_codex_sync/      # Python modules (13 files, ~1500 LOC)
-│   ├── cli.py                     # Main orchestrator
-│   ├── source_resolver.py         # Source detection (live/zip/auto)
-│   ├── asset_sync_dir.py          # Directory-based sync
-│   ├── asset_sync_zip.py          # Zip-based sync
-│   ├── path_normalizer.py         # Path rewriting + agent .md→.toml
-│   ├── config_enforcer.py         # Config, multi-agent, agent registration
-│   ├── prompt_exporter.py         # Prompt file generation
-│   ├── bridge_generator.py        # Bridge skill for Codex
-│   ├── dep_bootstrapper.py        # Dependency installation
-│   ├── runtime_verifier.py        # Health checks
-│   ├── sync_registry.py           # Backup/registry (SHA-256)
-│   ├── constants.py               # Replacements, model maps
-│   └── utils.py                   # Shared utilities
-├── templates/                     # Template files for generated content
-├── tests/                         # pytest suite
-├── scripts/                       # Legacy standalone scripts
-└── docs/                          # Documentation
+├── bin/ck-codex-sync.js
+├── src/claudekit_codex_sync/
+│   ├── cli.py
+│   ├── clean_target.py
+│   ├── source_resolver.py
+│   ├── asset_sync_dir.py
+│   ├── asset_sync_zip.py
+│   ├── path_normalizer.py
+│   ├── config_enforcer.py
+│   ├── prompt_exporter.py
+│   ├── bridge_generator.py
+│   ├── dep_bootstrapper.py
+│   ├── runtime_verifier.py
+│   ├── sync_registry.py
+│   ├── constants.py
+│   └── utils.py
+├── templates/
+├── tests/
+└── docs/
 ```
 
 ## Development
@@ -112,11 +126,11 @@ Read-only agents (brainstormer, code_reviewer, researcher, project_manager, jour
 # Run tests
 PYTHONPATH=src python3 -m pytest tests/ -v
 
-# Lint
+# Compile check
 python3 -m py_compile src/claudekit_codex_sync/*.py
 
-# Run sync locally
-PYTHONPATH=src python3 -m claudekit_codex_sync.cli --source-mode live --dry-run
+# Local dry-run sync
+PYTHONPATH=src python3 -m claudekit_codex_sync.cli -n
 ```
 
 ## Documentation

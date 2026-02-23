@@ -41,7 +41,7 @@ def detect_claude_source() -> Path:
     for p in candidates:
         if p.exists() and (p / "skills").is_dir():
             return p
-    raise SyncError("Claude Code not found. Use --source-dir to specify.")
+    raise SyncError("Claude Code not found. Use --source to specify.")
 
 
 def validate_source(source: Path) -> Dict[str, bool]:
@@ -61,11 +61,19 @@ def collect_skill_entries(zf: zipfile.ZipFile) -> Dict[str, List[Tuple[str, str]
     for name in zf.namelist():
         if name.endswith("/") or not name.startswith(".claude/skills/"):
             continue
-        rel = name[len(".claude/skills/") :]
+        rel = name[len(".claude/skills/") :].replace("\\", "/")
+        path = Path(rel)
+        if path.is_absolute() or ".." in path.parts:
+            raise SyncError(f"Unsafe zip entry path: {name}")
         parts = rel.split("/", 1)
         if len(parts) != 2:
             continue
         skill, inner = parts
+        inner_path = Path(inner)
+        if Path(skill).is_absolute() or ".." in Path(skill).parts:
+            raise SyncError(f"Unsafe skill name in zip entry: {name}")
+        if inner_path.is_absolute() or ".." in inner_path.parts:
+            raise SyncError(f"Unsafe skill file path in zip entry: {name}")
         skill_files.setdefault(skill, []).append((name, inner))
     return skill_files
 

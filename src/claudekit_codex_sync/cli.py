@@ -8,12 +8,18 @@ import json
 import os
 import zipfile
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from .asset_sync_dir import sync_assets_from_dir, sync_skills_from_dir
 from .asset_sync_zip import sync_assets, sync_skills
 from .bridge_generator import ensure_bridge_skill
-from .config_enforcer import ensure_agents, enforce_config, enforce_multi_agent_flag
+from .clean_target import clean_target
+from .config_enforcer import (
+    enforce_config,
+    enforce_multi_agent_flag,
+    ensure_agents,
+    register_agents,
+)
 from .dep_bootstrapper import bootstrap_deps
 from .path_normalizer import normalize_agent_tomls, normalize_files
 from .prompt_exporter import export_prompts
@@ -26,41 +32,85 @@ from .utils import SyncError, eprint
 def print_summary(summary: Dict[str, Any]) -> None:
     print(json.dumps(summary, indent=2, ensure_ascii=False))
 
+
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="All-in-one ClaudeKit -> Codex sync script."
+        prog="ckc-sync",
+        description="Sync ClaudeKit skills, agents, and config to Codex CLI.",
     )
-    p.add_argument("--zip", dest="zip_path", type=Path, help="Specific ClaudeKit zip path")
-    p.add_argument("--codex-home", type=Path, default=None, help="Codex home (default: $CODEX_HOME or ~/.codex)")
-    p.add_argument("--workspace", type=Path, default=Path.cwd(), help="Workspace root for AGENTS.md")
-    p.add_argument("--source-mode", choices=["auto", "live", "zip"], default="auto", help="Source mode")
-    p.add_argument("--source-dir", type=Path, default=None, help="Source directory for live mode")
-    p.add_argument("--include-mcp", action="store_true", help="Include MCP skills/prompts")
-    p.add_argument("--include-hooks", action="store_true", help="Include hooks")
-    p.add_argument("--include-conflicts", action="store_true", help="Include conflicting skills")
-    p.add_argument("--include-test-deps", action="store_true", help="Install test requirements")
-    p.add_argument("--skip-bootstrap", action="store_true", help="Skip dependency bootstrap")
-    p.add_argument("--skip-verify", action="store_true", help="Skip verification")
-    p.add_argument("--skip-agent-toml", action="store_true", help="Skip agent TOML normalization")
-    p.add_argument("--respect-edits", action="store_true", help="Backup user-edited files")
-    p.add_argument("--dry-run", action="store_true", help="Preview changes only")
+    p.add_argument(
+        "-g",
+        "--global",
+        dest="global_scope",
+        action="store_true",
+        help="Sync to ~/.codex/ (default: ./.codex/)",
+    )
+    p.add_argument(
+        "-f",
+        "--fresh",
+        action="store_true",
+        help="Clean target dirs before sync",
+    )
+    p.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite user-edited files without backup (required for zip write mode)",
+    )
+    p.add_argument(
+        "--zip",
+        dest="zip_path",
+        type=Path,
+        help="Sync from zip instead of live ~/.claude/",
+    )
+    p.add_argument(
+        "--source",
+        type=Path,
+        default=None,
+        help="Custom source dir (default: ~/.claude/)",
+    )
+    p.add_argument(
+        "--mcp",
+        action="store_true",
+        help="Include MCP skills",
+    )
+    p.add_argument(
+        "--no-deps",
+        action="store_true",
+        help="Skip dependency bootstrap (venv)",
+    )
+    p.add_argument(
+        "-n",
+        "--dry-run",
+        action="store_true",
+        help="Preview only",
+    )
     return p.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    codex_home = (args.codex_home or Path(os.environ.get("CODEX_HOME", "~/.codex"))).expanduser().resolve()
-    workspace = args.workspace.expanduser().resolve()
-    workspace.mkdir(parents=True, exist_ok=True)
 
-    # Load registry for backup/respect-edits
+    if args.global_scope:
+        codex_home = Path(os.environ.get("CODEX_HOME", "~/.codex")).expanduser().resolve()
+    else:
+        codex_home = (Path.cwd() / ".codex").resolve()
+
+    workspace = Path.cwd().resolve()
+    if not args.dry_run:
+        codex_home.mkdir(parents=True, exist_ok=True)
+
+    if args.fresh:
+        removed = clean_target(codex_home, dry_run=args.dry_run)
+        print(f"fresh: removed {removed} files")
+
     registry = load_registry(codex_home)
 
-    source_mode = args.source_mode
-    use_live = source_mode == "live" or (source_mode == "auto" and args.source_dir)
+    use_live = args.zip_path is None
+    if not use_live and not args.force and not args.dry_run:
+        raise SyncError("zip sync requires --force for write mode")
 
     if use_live:
-        source = args.source_dir or detect_claude_source()
+        source = args.source or detect_claude_source()
         validation = validate_source(source)
         print(f"source: {source} (live)")
         print(f"validation: {validation}")
@@ -71,101 +121,85 @@ def main() -> int:
         registry["sourceDir"] = None
 
     print(f"codex_home: {codex_home}")
-    print(f"workspace: {workspace}")
-    print(
-        f"include_mcp={args.include_mcp} include_hooks={args.include_hooks} "
-        f"dry_run={args.dry_run} respect_edits={args.respect_edits}"
-    )
-
-    codex_home.mkdir(parents=True, exist_ok=True)
+    print(f"scope: {'global' if args.global_scope else 'project'}")
+    print(f"fresh={args.fresh} force={args.force} mcp={args.mcp} dry_run={args.dry_run}")
 
     if use_live:
         assets_stats = sync_assets_from_dir(
-            source, codex_home=codex_home, include_hooks=args.include_hooks, dry_run=args.dry_run
+            source,
+            codex_home=codex_home,
+            include_hooks=True,
+            dry_run=args.dry_run,
+            registry=registry,
+            force=args.force,
         )
         skills_stats = sync_skills_from_dir(
             source,
             codex_home=codex_home,
-            include_mcp=args.include_mcp,
-            include_conflicts=args.include_conflicts,
+            include_mcp=args.mcp,
+            include_conflicts=False,
             dry_run=args.dry_run,
         )
     else:
-        with zipfile.ZipFile(zip_path) as zf:  # type: ignore
+        with zipfile.ZipFile(zip_path) as zf:
             assets_stats = sync_assets(
-                zf, codex_home=codex_home, include_hooks=args.include_hooks, dry_run=args.dry_run
+                zf,
+                codex_home=codex_home,
+                include_hooks=True,
+                dry_run=args.dry_run,
             )
             skills_stats = sync_skills(
                 zf,
                 codex_home=codex_home,
-                include_mcp=args.include_mcp,
-                include_conflicts=args.include_conflicts,
+                include_mcp=args.mcp,
+                include_conflicts=False,
                 dry_run=args.dry_run,
             )
 
-    print(
-        f"assets: added={assets_stats['added']} updated={assets_stats['updated']} "
-        f"removed={assets_stats['removed']}"
-    )
-    print(
-        f"skills: added={skills_stats['added']} updated={skills_stats['updated']} "
-        f"skipped={skills_stats['skipped']}"
-    )
+    print(f"assets: added={assets_stats['added']} updated={assets_stats['updated']}")
+    print(f"skills: added={skills_stats['added']} updated={skills_stats['updated']}")
 
-    changed = normalize_files(codex_home=codex_home, include_mcp=args.include_mcp, dry_run=args.dry_run)
+    changed = normalize_files(codex_home=codex_home, include_mcp=args.mcp, dry_run=args.dry_run)
     print(f"normalize_changed={changed}")
 
-    # Agent TOML normalization
-    agent_toml_changed = 0
-    if not args.skip_agent_toml:
-        agent_toml_changed = normalize_agent_tomls(codex_home=codex_home, dry_run=args.dry_run)
-        print(f"agent_toml_changed={agent_toml_changed}")
+    agent_toml_changed = normalize_agent_tomls(codex_home=codex_home, dry_run=args.dry_run)
+    print(f"agent_toml_changed={agent_toml_changed}")
+
+    agents_registered = register_agents(codex_home=codex_home, dry_run=args.dry_run)
+    print(f"agents_registered={agents_registered}")
 
     baseline_changed = 0
     if ensure_agents(workspace=workspace, dry_run=args.dry_run):
         baseline_changed += 1
-        print(f"upsert: {workspace / 'AGENTS.md'}")
-    if enforce_config(codex_home=codex_home, include_mcp=args.include_mcp, dry_run=args.dry_run):
+    if enforce_config(codex_home=codex_home, include_mcp=args.mcp, dry_run=args.dry_run):
         baseline_changed += 1
-        print(f"upsert: {codex_home / 'config.toml'}")
     if ensure_bridge_skill(codex_home=codex_home, dry_run=args.dry_run):
         baseline_changed += 1
-        print(f"upsert: {codex_home / 'skills' / 'claudekit-command-bridge'}")
 
-    # Enable multi_agent flag
     config_path = codex_home / "config.toml"
-    if enforce_multi_agent_flag(config_path, dry_run=args.dry_run):
-        print(f"upsert: multi_agent = true in {config_path}")
-
+    enforce_multi_agent_flag(config_path, dry_run=args.dry_run)
     print(f"baseline_changed={baseline_changed}")
 
-    prompt_stats = export_prompts(codex_home=codex_home, include_mcp=args.include_mcp, dry_run=args.dry_run)
-    print(
-        f"prompts: added={prompt_stats['added']} updated={prompt_stats['updated']} "
-        f"total_generated={prompt_stats['total_generated']}"
-    )
+    prompt_stats = export_prompts(codex_home=codex_home, include_mcp=args.mcp, dry_run=args.dry_run)
+    print(f"prompts: added={prompt_stats['added']} total={prompt_stats['total_generated']}")
 
     bootstrap_stats = None
-    if not args.skip_bootstrap:
+    if not args.no_deps:
         bootstrap_stats = bootstrap_deps(
             codex_home=codex_home,
-            include_mcp=args.include_mcp,
-            include_test_deps=args.include_test_deps,
+            include_mcp=args.mcp,
             dry_run=args.dry_run,
         )
         print(
-            f"bootstrap: python_ok={bootstrap_stats['python_ok']} "
-            f"python_fail={bootstrap_stats['python_fail']}"
+            f"bootstrap: py_ok={bootstrap_stats['python_ok']} "
+            f"py_fail={bootstrap_stats['python_fail']}"
         )
         if (bootstrap_stats["python_fail"] or bootstrap_stats["node_fail"]) and not args.dry_run:
             raise SyncError("Dependency bootstrap reported failures")
 
-    verify_stats = None
-    if not args.skip_verify:
-        verify_stats = verify_runtime(codex_home=codex_home, dry_run=args.dry_run)
-        print(f"verify: {verify_stats}")
+    verify_stats = verify_runtime(codex_home=codex_home, dry_run=args.dry_run)
+    print(f"verify: {verify_stats}")
 
-    # Save registry
     if not args.dry_run:
         save_registry(codex_home, registry)
 
@@ -173,21 +207,19 @@ def main() -> int:
         "source": str(source) if use_live else str(zip_path),
         "source_mode": "live" if use_live else "zip",
         "codex_home": str(codex_home),
-        "workspace": str(workspace),
-        "dry_run": args.dry_run,
-        "include_mcp": args.include_mcp,
-        "include_hooks": args.include_hooks,
+        "scope": "global" if args.global_scope else "project",
+        "fresh": args.fresh,
         "assets": assets_stats,
         "skills": skills_stats,
         "normalize_changed": changed,
         "agent_toml_changed": agent_toml_changed,
-        "baseline_changed": baseline_changed,
+        "agents_registered": agents_registered,
         "prompts": prompt_stats,
         "bootstrap": bootstrap_stats,
         "verify": verify_stats,
     }
     print_summary(summary)
-    print("done: claudekit all-in-one sync completed")
+    print("done: ckc-sync completed")
     return 0
 
 

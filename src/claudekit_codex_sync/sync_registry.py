@@ -28,6 +28,7 @@ def load_registry(codex_home: Path) -> Dict[str, Any]:
 def save_registry(codex_home: Path, registry: Dict[str, Any]) -> None:
     """Save sync registry to disk."""
     registry_path = codex_home / REGISTRY_FILE
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
     registry["lastSync"] = datetime.now(timezone.utc).isoformat()
     registry_path.write_text(json.dumps(registry, indent=2), encoding="utf-8")
 

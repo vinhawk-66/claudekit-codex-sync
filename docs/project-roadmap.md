@@ -1,51 +1,45 @@
 # Project Roadmap
 
-## v0.1.0 — Initial Release ✅
+## v0.1.0 - Initial Release
 
 **Status:** Complete
 
-- [x] Project structure (modular Python, npm wrapper)
-- [x] Dual source support (live directory + zip archive)
-- [x] Path normalization (`.claude` → `.codex`)
-- [x] Asset sync (agents, commands, rules, scripts)
-- [x] Skill sync (54+ skills)
-- [x] Agent .md → .toml conversion
-- [x] Claude → Codex model mapping
-- [x] Multi-agent config enforcement
-- [x] Agent registration in config.toml
+- [x] Core sync pipeline
+- [x] Live + zip source support
+- [x] Path normalization
+- [x] Config enforcement
 - [x] Prompt export
 - [x] Dependency bootstrap
 - [x] Runtime verification
-- [x] Basic test suite (11 tests)
-- [x] Documentation (README, architecture, code standards)
 
-## v0.2.0 — Quality & Coverage
+## v0.2.0 - CLI Redesign + Cleanup
+
+**Status:** Complete
+
+- [x] New CLI surface: `ckc-sync` + backward-compatible `ck-codex-sync`
+- [x] 8-flag interface and project-scope default
+- [x] Fresh clean flow (`-f`) with safe `.venv` retention
+- [x] Symlink-first venv bootstrap optimization
+- [x] Registry/backup wiring for managed asset overwrite policy
+- [x] Safety hardening (`save_registry` and agent conversion defensive mkdir)
+- [x] Expanded test suite to 21 tests (clean target + CLI args)
+- [x] Documentation refresh for new CLI contract
+- [x] Removed legacy standalone `scripts/` and stale `reports/`
+
+## v0.3.0 - Coverage + Reliability
 
 **Status:** Planned
 
-- [ ] Full test coverage for all 13 modules
-- [ ] Integration tests (end-to-end sync flow)
-- [ ] Idempotent re-sync (skip unchanged files)
-- [ ] `--respect-edits` fully wired (detect user modifications via SHA-256)
-- [ ] Proper error messages for common failures
-- [ ] `path_normalizer.py` refactor (currently 248 LOC, split conversion out)
+- [ ] Increase unit coverage for sync modules not yet directly tested
+- [ ] Add integration tests for live/zip sync end-to-end paths
+- [ ] Add CI matrix for Linux/macOS/WSL behavior
+- [ ] Improve validation and user-facing error messages
 
-## v0.3.0 — Distribution
-
-**Status:** Planned
-
-- [ ] PyPI package (alongside npm)
-- [ ] CI/CD pipeline (GitHub Actions)
-- [ ] Versioned releases with changelog
-- [ ] Community contribution guide
-- [ ] Cross-platform testing (Linux, macOS, WSL)
-
-## v0.4.0 — Advanced Features
+## v0.4.0 - Distribution + Advanced Features
 
 **Status:** Future
 
-- [ ] Incremental sync (only changed files)
-- [ ] Watch mode (auto-sync on file changes)
-- [ ] Custom model mapping config (user-defined model overrides)
-- [ ] MCP server migration support
-- [ ] Bi-directional sync (Codex → ClaudeKit)
+- [ ] PyPI distribution (alongside npm)
+- [ ] Release automation and changelog workflow
+- [ ] Incremental sync / watch mode
+- [ ] Customizable model mapping policy

@@ -35,11 +35,8 @@ Codex working profile for this workspace, adapted from ClaudeKit rules and workf
 - Activate relevant skills intentionally per task.
 - For legacy ClaudeKit command intents (`/ck-help`, `/coding-level`, `/ask`, `/docs/*`, `/journal`, `/watzup`), use `$claudekit-command-bridge`.
 
-## Reference Material (Imported from ClaudeKit)
+## Reference Material
 
-- `~/.codex/claudekit/CLAUDE.md`
-- `~/.codex/claudekit/rules/development-rules.md`
-- `~/.codex/claudekit/rules/primary-workflow.md`
-- `~/.codex/claudekit/rules/orchestration-protocol.md`
-- `~/.codex/claudekit/rules/documentation-management.md`
-- `~/.codex/claudekit/rules/team-coordination-rules.md`
+- `README.md`
+- `docs/`
+- `plans/`
