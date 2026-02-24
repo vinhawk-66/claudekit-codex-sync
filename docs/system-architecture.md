@@ -9,7 +9,7 @@
 │   agents/*.md        │    │   agents/*.toml (convert) │
 │   skills/*           │    │   skills/*                │
 │   output-styles/     │    │   output-styles/          │
-│   rules/             │    │   rules/                  │
+│   rules/             │    │   rules/ (+ generated)    │
 │   scripts/           │    │   scripts/                │
 └─────────────────────┘    │   config.toml             │
                             └──────────────────────────┘
@@ -17,39 +17,43 @@
 
 Workspace baseline: `./AGENTS.md` is ensured in the current working directory.
 
-## Pipeline
+## Pipeline (7 Steps)
 
 1. **CLI parse (`cli.py`)**
-- Select scope: project (default) or global (`-g`)
-- Optional fresh cleanup (`-f`)
-- Select source: live (`~/.claude/`) or zip (`--zip`)
+   - Select scope: project (default) or global (`-g`)
+   - Optional fresh cleanup (`-f`) with safety guard (rejects `/` and `$HOME`)
+   - Select source: live (`~/.claude/`) or zip (`--zip`)
+   - Fatal error if source missing `skills/` directory
 
 2. **Asset/skill sync**
-- Copy agents `.md` directly to `codex_home/agents/` (for TOML conversion)
-- Copy managed assets (output-styles, rules, scripts) to `codex_home/` directly
-- Copy skills to `codex_home/skills/`
-- Apply registry-aware overwrite behavior (`--force`)
+   - Copy agents `.md` directly to `codex_home/agents/` (for TOML conversion)
+   - Copy managed assets (output-styles, rules, scripts) to `codex_home/`
+   - Copy skills to `codex_home/skills/`
+   - Apply registry-aware overwrite behavior (`--force`)
+   - Silent operation — returns counts, no per-item logging
 
 3. **Normalization**
-- Rewrite `.claude` references to `.codex`
-- Convert agent `.md` (YAML frontmatter) → `.toml` with model mapping
-- Normalize existing agent TOMLs and compatibility patches
+   - Rewrite `.claude` references to `.codex` using `_BASE_PATH_REPLACEMENTS` + context-specific extensions
+   - Convert agent `.md` (YAML frontmatter) → `.toml` with model mapping
+   - Normalize existing agent TOMLs and compatibility patches
 
-4. **Config enforcement**
-- Enforce `config.toml` defaults
-- Enforce `[features]` flags
-- Register agents from `agents/*.toml`
-- Ensure workspace-level `AGENTS.md` baseline file exists
+4. **Hook rules generation**
+   - Generate `rules/` from hook behavior templates (security-privacy, file-naming, code-quality)
 
-5. **Hook rules generation**
-- Generate rules/ from hook behavior templates (security-privacy, file-naming, code-quality)
+5. **Config enforcement**
+   - Enforce `config.toml` defaults and `[features]` flags
+   - Register agents from `agents/*.toml`
+   - Ensure workspace-level `AGENTS.md` baseline
+   - Ensure bridge skill for Codex-native routing
 
 6. **Dependency bootstrap**
-- Try symlink reuse of `~/.claude/skills/.venv`
-- Fallback to local venv + dependency install
+   - Try symlink reuse of `~/.claude/skills/.venv`
+   - Fallback to local venv + pip install
+   - Node deps always run independently (not gated by Python symlink state)
 
 7. **Runtime verification**
-- Execute health checks and emit summary
+   - Health checks with distinct status: `ok` / `failed` / `not-found` / `no-venv`
+   - Structured output via `log_formatter.py` (~18 lines compact)
 
 ## CLI Contract (v0.2)
 
@@ -66,8 +70,10 @@ Workspace baseline: `./AGENTS.md` is ensured in the current working directory.
 
 ## Design Notes
 
-- Project-first scope reduces accidental global writes while developing.
-- Agents copied to top-level `agents/` (not `claudekit/agents/`) to match conversion function expectations.
-- `clean_target.py` deletes real `.venv` dirs (keeps symlinks) so re-symlink works on refresh.
-- Bootstrap skips pip install when venv is symlinked — packages already present.
-- Registry writes are defensive (`mkdir` before save) to avoid missing-path failures.
+- Project-first scope reduces accidental global writes during development.
+- Agents copied to top-level `agents/` to match conversion function expectations.
+- `clean_target.py` has safety guard — rejects destructive paths (`/`, `$HOME`).
+- Bootstrap: Python pip skipped when venv symlinked; Node deps always run.
+- Registry writes are defensive (`mkdir` before save).
+- Replacement tables use `_BASE_PATH_REPLACEMENTS` + compose pattern (DRY).
+- Modules are silent — return data only. `cli.py` handles all terminal output via `log_formatter.py`.

@@ -38,14 +38,28 @@
 - [x] Add syntax adaptations for Claude→Codex patterns
 - [x] Add test coverage for rules_generator
 
+## v0.2.6 - Optimization + Safety + Logging
+
+**Status:** Complete
+
+- [x] Remove dead code (`prompt_exporter.py`, `PROMPT_MANIFEST`, `PROMPT_REPLACEMENTS`)
+- [x] DRY replacement tables (`_BASE_PATH_REPLACEMENTS` + compose pattern)
+- [x] Safety boundary for `--fresh` (reject `/` and `$HOME`)
+- [x] Fatal source validation (require `skills/` directory)
+- [x] Runtime verifier status differentiation (`ok`/`failed`/`not-found`/`no-venv`)
+- [x] Decouple Node deps from Python venv symlink state
+- [x] Structured logging (`log_formatter.py`) — 100→18 lines output
+- [x] Test coverage expansion (25 → 39 tests: asset sync, safety, verifier, agent converter)
+
 ## v0.3.0 - Coverage + Reliability
 
 **Status:** Planned
 
-- [ ] Increase unit coverage for sync modules not yet directly tested
-- [ ] Add integration tests for live/zip sync end-to-end paths
+- [ ] Integration tests for live/zip sync end-to-end paths
 - [ ] Add CI matrix for Linux/macOS/WSL behavior
-- [ ] Improve validation and user-facing error messages
+- [ ] Split `path_normalizer.py` into focused modules (<200 LOC)
+- [ ] Proper TOML parser for config updates (replace substring checks)
+- [ ] Per-file skill sync via checksum (avoid full directory re-copy)
 
 ## v0.4.0 - Distribution + Advanced Features
 

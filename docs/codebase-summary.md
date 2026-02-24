@@ -2,79 +2,87 @@
 
 ## Overview
 
-**claudekit-codex-sync** bridges ClaudeKit (`~/.claude/`) to Codex CLI (`.codex/` project scope by default, optional global `~/.codex/`) by syncing skills, assets, prompts, and runtime defaults.
+**claudekit-codex-sync** bridges ClaudeKit (`~/.claude/`) to Codex CLI (`.codex/` project scope by default, optional global `~/.codex/`) by syncing skills, assets, and runtime defaults.
 
 ## Stats
 
 | Component | Files | Purpose |
 |---|---|---|
-| `src/claudekit_codex_sync/` | 14 | Core Python sync modules |
-| `templates/` | 6 | Generated content templates |
-| `tests/` | 4 | pytest suite |
+| `src/claudekit_codex_sync/` | 16 | Core Python sync modules |
+| `templates/` | 9 | Generated content templates |
+| `tests/` | 10 | pytest suite (39 tests) |
 | `bin/` | 2 | npm CLI entry points |
 
 ## Module Map
 
 ### Core Orchestration
 
-- **`cli.py`** — Main entry point with 8-flag interface (`-g`, `-f`, `--force`, `--zip`, `--source`, `--mcp`, `--no-deps`, `-n`).
-- **`clean_target.py`** — Fresh-sync cleaner for `--fresh` (deletes real `.venv`, keeps symlinks).
+- **`cli.py`** (279 LOC) — Main entry point, 8-flag interface, orchestrates 7-step pipeline, uses `log_formatter` for structured output.
+- **`clean_target.py`** (69 LOC) — Fresh-sync cleaner (`--fresh`). Safety guard rejects `/` and `$HOME` as codex_home.
+- **`log_formatter.py`** (103 LOC) — Structured CLI output with ANSI color, TTY detection, `NO_COLOR` support.
 
 ### Source Resolution
 
-- **`source_resolver.py`** — Live source discovery and zip source lookup.
+- **`source_resolver.py`** (86 LOC) — Live source discovery and zip source lookup. Fatal when `skills/` missing.
 
 ### Asset & Skill Sync
 
-- **`asset_sync_dir.py`** — Live sync for assets, agents, and skills. Copies agents directly to `codex_home/agents/` for TOML conversion. Registry-aware overwrite/backup.
-- **`asset_sync_zip.py`** — Zip-based sync path.
+- **`asset_sync_dir.py`** (172 LOC) — Live sync for assets, agents, skills. Registry-aware overwrite/backup. Silent operation (returns counts only).
+- **`asset_sync_zip.py`** (150 LOC) — Zip-based sync path.
 
 ### Normalization & Conversion
 
-- **`path_normalizer.py`** — `.claude` path rewrites, copywriting script patch, agent markdown-to-TOML conversion.
-- **`constants.py`** — Replacement patterns, model mapping, asset allowlists.
+- **`path_normalizer.py`** (255 LOC) — `.claude` path rewrites, copywriting script patch, agent `.md`→`.toml` conversion.
+- **`constants.py`** (78 LOC) — `_BASE_PATH_REPLACEMENTS` (shared base), model mapping, asset allowlists. DRY composition pattern.
 
-### Config & Prompting
+### Config & Rules
 
-- **`config_enforcer.py`** — `config.toml` enforcement + agent registration.
-- **`prompt_exporter.py`** — Prompt generation.
-- **`bridge_generator.py`** — Bridge skill generation.
+- **`config_enforcer.py`** (140 LOC) — `config.toml` enforcement + agent registration.
+- **`rules_generator.py`** (32 LOC) — Hook-equivalent rules from templates (security-privacy, file-naming, code-quality).
+- **`bridge_generator.py`** (34 LOC) — Bridge skill generation for Codex-native routing.
 
 ### Runtime Support
 
-- **`dep_bootstrapper.py`** — Symlink-first dependency bootstrap (`~/.claude/skills/.venv` -> `codex_home/skills/.venv` fallback to create/install).
-- **`runtime_verifier.py`** — Runtime health checks.
-- **`sync_registry.py`** — Sync registry and user-edit detection helpers.
-- **`utils.py`** — Shared helpers and `SyncError`.
+- **`dep_bootstrapper.py`** (113 LOC) — Symlink-first venv bootstrap. Node deps run independently of Python venv state.
+- **`runtime_verifier.py`** (47 LOC) — Runtime health checks with distinct status: `ok`/`failed`/`not-found`/`no-venv`.
+- **`sync_registry.py`** (77 LOC) — Sync registry and user-edit detection via SHA-256 checksums.
+- **`utils.py`** (129 LOC) — Shared helpers and `SyncError`.
 
 ## Data Flow
 
 ```
 Source (~/.claude/ or zip)
     ↓
-source_resolver.py
+source_resolver.py (validate: skills/ must exist)
     ↓
 asset_sync_dir.py / asset_sync_zip.py
     ↓
-path_normalizer.py
+path_normalizer.py (rewrite + .md→.toml convert)
     ↓
-config_enforcer.py
+rules_generator.py (hook→rules)
     ↓
-prompt_exporter.py
+config_enforcer.py + bridge_generator.py
     ↓
-dep_bootstrapper.py
+dep_bootstrapper.py (Python symlink + Node deps)
     ↓
 runtime_verifier.py
     ↓
-Configured Codex home (.codex project scope or ~/.codex global)
+log_formatter.py → structured terminal output
+    ↓
+Configured Codex home (.codex/ or ~/.codex/)
 ```
 
 ## Test Coverage
 
-| File | Tests |
-|---|---|
-| `tests/test_config_enforcer.py` | 4 |
-| `tests/test_path_normalizer.py` | 7 |
-| `tests/test_clean_target.py` | 5 |
-| `tests/test_cli_args.py` | 6 |
-| **Total** | **22** |
+| File | Tests | Coverage |
+|---|---|---|
+| `test_asset_sync_dir.py` | 6 | copy, idempotent, agents, dry-run, skills, exclusion |
+| `test_agent_converter.py` | 3 | md→toml, sandbox, no-frontmatter |
+| `test_safety_guards.py` | 3 | reject root, reject home, accept normal |
+| `test_runtime_verifier.py` | 2 | dry-run, empty codex_home |
+| `test_path_normalizer.py` | 7 | path replacement patterns |
+| `test_config_enforcer.py` | 4 | multi_agent flag enforcement |
+| `test_clean_target.py` | 5 | cleanup + venv retention |
+| `test_cli_args.py` | 6 | argument parsing |
+| `test_rules_generator.py` | 3 | rule generation + idempotency |
+| **Total** | **39** | |
