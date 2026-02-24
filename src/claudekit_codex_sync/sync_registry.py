@@ -73,6 +73,5 @@ def maybe_backup(
         return None
     if check_user_edit(entry, target):
         backup = create_backup(target)
-        print(f"backup(user-edit): {rel_path} -> {backup.name}")
         return backup
     return None

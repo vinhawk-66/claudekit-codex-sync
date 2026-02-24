@@ -26,6 +26,5 @@ def generate_hook_rules(*, codex_home: Path, dry_run: bool) -> int:
         target = rules_dir / rule_name
         if write_text_if_changed(target, content, dry_run=dry_run):
             generated += 1
-            print(f"upsert: rules/{rule_name}")
 
     return generated

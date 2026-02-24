@@ -13,30 +13,35 @@ def verify_runtime(*, codex_home: Path, dry_run: bool) -> Dict[str, Any]:
     if dry_run:
         return {"skipped": True}
 
-    # Silent codex check — just verify it exists and runs
+    # Codex binary check
     codex_bin = shutil.which("codex")
-    codex_ok = False
-    if codex_bin:
+    if not codex_bin:
+        codex_status = "not-found"
+    else:
         result = subprocess.run(
             [codex_bin, "--version"], capture_output=True, timeout=10
         )
-        codex_ok = result.returncode == 0
+        codex_status = "ok" if result.returncode == 0 else "failed"
 
-    # Silent copywriting check
+    # Copywriting script check
     copy_script = codex_home / "skills" / "copywriting" / "scripts" / "extract-writing-styles.py"
     py_bin = codex_home / "skills" / ".venv" / "bin" / "python3"
-    copywriting_ok = False
-    if copy_script.exists() and py_bin.exists():
+    if not copy_script.exists():
+        copy_status = "not-found"
+    elif not py_bin.exists():
+        copy_status = "no-venv"
+    else:
         result = subprocess.run(
             [str(py_bin), str(copy_script), "--list"], capture_output=True, timeout=30
         )
-        copywriting_ok = result.returncode == 0
+        copy_status = "ok" if result.returncode == 0 else "failed"
 
-    prompts_count = len(list((codex_home / "prompts").glob("*.md")))
+    prompts_dir = codex_home / "prompts"
+    prompts_count = len(list(prompts_dir.glob("*.md"))) if prompts_dir.exists() else 0
     skills_count = len(list((codex_home / "skills").rglob("SKILL.md")))
     return {
-        "codex": "ok" if codex_ok else "missing",
-        "copywriting": "ok" if copywriting_ok else "skipped",
+        "codex": codex_status,
+        "copywriting": copy_status,
         "prompts": prompts_count,
         "skills": skills_count,
     }

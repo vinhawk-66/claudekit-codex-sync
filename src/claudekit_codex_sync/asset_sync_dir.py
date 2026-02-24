@@ -43,19 +43,14 @@ def sync_assets_from_dir(
                 if entry:
                     if dry_run and check_user_edit(entry, dst):
                         skipped += 1
-                        print(f"skip(user-edit): {rel_path}")
                         continue
                     backup = maybe_backup(registry, rel_path, dst, respect_edits=True)
                     if backup:
                         skipped += 1
-                        print(f"skip(user-edit): {rel_path}")
                         continue
                 elif compute_hash(src_file) != compute_hash(dst):
-                    if dry_run:
-                        print(f"[dry-run] backup(untracked): {rel_path}")
-                    else:
-                        backup = create_backup(dst)
-                        print(f"backup(untracked): {rel_path} -> {backup.name}")
+                    if not dry_run:
+                        create_backup(dst)
 
             data = src_file.read_bytes()
             mode = src_file.stat().st_mode & 0o777 if src_file.stat().st_mode & 0o111 else None
@@ -63,10 +58,8 @@ def sync_assets_from_dir(
             if changed:
                 if is_added:
                     added += 1
-                    print(f"add: {rel_path}")
                 else:
                     updated += 1
-                    print(f"update: {rel_path}")
             if registry and not dry_run and dst.exists():
                 update_entry(registry, rel_path, src_file, dst)
 
@@ -82,19 +75,14 @@ def sync_assets_from_dir(
             if entry:
                 if dry_run and check_user_edit(entry, dst):
                     skipped += 1
-                    print(f"skip(user-edit): {rel_path}")
                     continue
                 backup = maybe_backup(registry, rel_path, dst, respect_edits=True)
                 if backup:
                     skipped += 1
-                    print(f"skip(user-edit): {rel_path}")
                     continue
             elif compute_hash(src) != compute_hash(dst):
-                if dry_run:
-                    print(f"[dry-run] backup(untracked): {rel_path}")
-                else:
-                    backup = create_backup(dst)
-                    print(f"backup(untracked): {rel_path} -> {backup.name}")
+                if not dry_run:
+                    create_backup(dst)
 
         data = src.read_bytes()
         mode = src.stat().st_mode & 0o777 if src.stat().st_mode & 0o111 else None
@@ -102,15 +90,12 @@ def sync_assets_from_dir(
         if changed:
             if is_added:
                 added += 1
-                print(f"add: {rel_path}")
             else:
                 updated += 1
-                print(f"update: {rel_path}")
         if registry and not dry_run and dst.exists():
             update_entry(registry, rel_path, src, dst)
 
-    # Copy agents directly to codex_home/agents/ (NOT claudekit/agents/)
-    # so convert_agents_md_to_toml() can find and convert them
+    # Copy agents directly to codex_home/agents/
     agents_src = source / "agents"
     if agents_src.exists():
         agents_dst = codex_home / "agents"
@@ -126,10 +111,8 @@ def sync_assets_from_dir(
             if changed:
                 if is_added:
                     added += 1
-                    print(f"add: agents/{rel}")
                 else:
                     updated += 1
-                    print(f"update: agents/{rel}")
 
     return {"added": added, "updated": updated, "removed": 0, "skipped": skipped}
 
@@ -157,29 +140,23 @@ def sync_skills_from_dir(
 
         if skill in EXCLUDED_SKILLS_ALWAYS:
             skipped += 1
-            print(f"skip: {skill}")
             continue
         if not include_mcp and skill in MCP_SKILLS:
             skipped += 1
-            print(f"skip: {skill}")
             continue
         if skill in CONFLICT_SKILLS:
             skipped += 1
-            print(f"skip: {skill}")
             continue
         if not include_conflicts and (skills_dst / ".system" / skill).exists():
             skipped += 1
-            print(f"skip: {skill}")
             continue
 
         dst = skills_dst / skill
         exists = dst.exists()
         if exists:
             updated += 1
-            print(f"update: {skill}")
         else:
             added += 1
-            print(f"add: {skill}")
 
         if dry_run:
             continue

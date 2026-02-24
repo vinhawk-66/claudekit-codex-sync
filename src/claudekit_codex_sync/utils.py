@@ -34,7 +34,6 @@ def run_cmd(
     """Run a shell command with optional dry-run mode."""
     pretty = " ".join(cmd)
     if dry_run:
-        print(f"[dry-run] {pretty}")
         return subprocess.CompletedProcess(cmd, 0, "", "")
     return subprocess.run(
         list(cmd),
