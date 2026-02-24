@@ -41,7 +41,7 @@ def red(t: str) -> str:
 
 
 def log_header(
-    source: str, target: str, scope: str, dry_run: bool, version: str = "0.2.5"
+    source: str, target: str, scope: str, dry_run: bool, version: str = "0.2.6"
 ) -> None:
     """Print header with source/target info."""
     mode = " (dry-run)" if dry_run else ""
