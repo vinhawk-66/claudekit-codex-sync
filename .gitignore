@@ -6,3 +6,13 @@ dist/
 build/
 *.egg-info/
 .pytest_cache/
+
+# Internal AI planning docs
+plans/
+
+# Generated workspace baseline
+AGENTS.md
+
+# Runtime directories
+.codex/
+.claude/
